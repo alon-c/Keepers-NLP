@@ -1,0 +1,5 @@
+---
+applications:
+ - name: nlp-simulator-python
+   random-route: true
+   memory: 128M
