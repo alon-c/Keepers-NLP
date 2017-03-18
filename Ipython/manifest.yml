@@ -1,0 +1,9 @@
+---
+applications:
+- name: NLC_ipthon
+  memory: 1G
+  instances: 1
+  host: NLC_ipthon-${random-word}
+  domain: eu-gb.mybluemix.net
+  path: .
+  buildpack: https://github.com/joshuamckenty/heroku-buildpack-python
