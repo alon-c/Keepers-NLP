@@ -161,3 +161,20 @@ def create_graphs_one_level(testing_file, nb):
 
 
 
+
+# this function creates a csv file witch can be opend with excel and read as a table for the resaults
+def create_table_one_level(testing_file, nb):
+    res_accur, res_false, res_misplaced, res_missed = create_data_one_level(testing_file, nb)
+    target_file = testing_file + '-res.csv'
+    myfile = open(target_file , 'w')
+    wr = csv.writer(myfile )
+#    headlines = ['']
+#    headlines.extend(nb)
+#    wr.writerow(headlines)
+    headlines = nb
+    wr.writerow(headlines)
+    wr.writerow(res_accur)
+    wr.writerow(res_false)
+    wr.writerow(res_misplaced)
+    wr.writerow(res_missed)
+    
