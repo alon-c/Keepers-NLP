@@ -1,24 +1,25 @@
-'''
-Created on Feb 12, 2017
-
-@author: Alon
-'''
-# -*- coding: utf-8 -*-
-
 import classifier
+import tools
+from threadWrapper import wrapperInputs_two, classifierTask_two, trainingTask
+
 import csv
 import os
-import tools
 import matplotlib.pyplot as plt
 
-#This file deal with all that concern the two levels classification
+###
+# represents the two level classification for the 'NLC tool'
+#
+# Author: Alon Cohen Zada
+###
+
+# -*- coding: utf-8 -*-
+
+#This script deals with all that concerns the two levels classification:
 # create testing files
 # create classifiers
 # calculate accuracies
-# generate graphs
+# generate report
 
-
-# demander si lors de l'apprentissage il faut prendre les meme phrases
 
 # create a list of classifiers for the two levels classification
 def create_list_classifiers_two_levels(filename):
@@ -33,82 +34,78 @@ def create_list_classifiers_two_levels(filename):
             nb = nb[len(nb) - 1]
             nb = nb.split('.')[0]
             name_classifier = file.split('.csv')[0] + '_classifier_' + nb
-            classifier.create_classifier('../training_csv_files/' + file, name_classifier,nb)
 
+            threads = [] # threads list
+            i = 0 # thread number
+            for NLCAccount in classifier.NLC_ACCOUNTS:
+                threads.append(trainingTask(i, NLCAccount, file, name_classifier, nb))
+                i += 1
+
+            for  thread in threads:
+                thread.start()
+
+            for  thread in threads:
+                thread.join()
 
 #give accuracies with the two levels classification
 def accuracy_two_levels(testing_file, classifier_name, classifier_bad):
-
+    n_row = 0
+    inputs = [] # list of inputs from the file
     with open(testing_file) as csvfile:
-            n_row = 0
-            counter = 0
-            counter_get_2 = 0 
             reader = csv.reader(csvfile)
-            false_alerts_counter = 0  # number of predictions is 1,2 or 3 and the actual class is 0
-            misplaced_alerts_counter = 0  # number of 
-            missed_alerts_counter = 0  # number of predictions is 0 and the actual class is 1,2 or 3
-            A = 0  # All that the prediction is different of 0
-            T_1_2_3 = 0
-            T_0 = 0
-            # star process 
             for row in reader:
-                    n_row += 1  # number of examples into the file 
-                    actual_sentence = row[0]  # string of the example
-                    actual_class = row[1]  # example that we already know  the class
-                    print('O_1_classifier name :' ,classifier_name)                       
-                    answer_class = classifier.classify(classifier_name, actual_sentence)  # classified class with more confidence 
-                   
-                    if answer_class == '1':
-                        counter_get_2 += 1
-                        # when the prediction is different of 0
-                        A += 1
-                        # API CALL TO THE LEVEL-CLASSIFIER 
-                        answer_class = classifier.classify(classifier_bad, actual_sentence)
-                        #print('bad classifier name :' ,classifier_bad) 
-                    print("Actual Class: ",actual_class," ","Response Class: ",answer_class,"\n")
-                    
-                    if actual_class == '0':
-                        T_0 += 1
-                     
-                    # if the prediction is right  
-                    if actual_class == answer_class:  
-                        counter = counter + 1
-                        # good prediction different of 0 (misplaced_alert)
-                        if actual_class != '0': 
-                            misplaced_alerts_counter += 1  
-                            
-                    # if the prediction is wrong        
-                    else :
-                        print(actual_class,answer_class)
-                        # when the class is 0 and the prediction is different of 0(false alert)
-                        if actual_class == '0':
-                            false_alerts_counter += 1
-                        # when the actual class is 1,2 or 3 and it predict 0
-                        if answer_class == '0': #else is ok too i think need to see 
-                            missed_alerts_counter += 1
+                    n_row += 1  # number of examples in the file
+                    inputs.append(row) # appending the rows from the file to a list
+
+    # Start process
+    WI = wrapperInputs_two()
+    WI.inputs = inputs
+    threads = []
+    i = 0
+    for NLCAccount in classifier.NLC_ACCOUNTS:
+        threads.append(classifierTask_two(i, WI, classifier_name, NLCAccount[0], NLCAccount[1], classifier_bad))
+        print ('i', i)
+        print ('account name:', NLCAccount[0])
+        i += 1
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    counter = WI.counter
+    counter_get_2 = WI.counter_get_2
+    false_alerts_counter = WI.false_alerts_counter  # number of predictions is 1,2 or 3 and the actual class is 0
+    misplaced_alerts_counter = WI.misplaced_alerts_counter  # number of 
+    missed_alerts_counter = WI.missed_alerts_counter  # number of predictions is 0 and the actual class is 1,2 or 3
+    A = WI.A # All that the prediction is different of 0
+    T_1_2_3 = WI.T_1_2_3
+    T_0 = WI.T_0
+
+    accuracy = (counter / n_row) * 100
             
-            accuracy = (counter / n_row) * 100
+    print('A : ', A)
+    print('false alerts counter :' ,false_alerts_counter)
+    print('missed alerts counter :', missed_alerts_counter)
+    print('misplaced alerts counter :', misplaced_alerts_counter)
             
-            print('A : ', A)
-            print('false alerts counter :' ,false_alerts_counter)
-            print('missed alerts counter :', missed_alerts_counter)
-            print('misplaced alerts counter :', misplaced_alerts_counter)
-            
-            false_alerts = (false_alerts_counter / A) *100
-            misplaced_alerts = ((A - misplaced_alerts_counter)/A)  * 100
-            T_1_2_3 = n_row - T_0
-            print('T_1_2_3 : ' , T_1_2_3)
-            missed_alert = (missed_alerts_counter/T_1_2_3) * 100
-            
-            print("Results: ", "\n" , "Number of examples: ", n_row, "\n", "Number of hits: ", counter, '\n', "Accuracy: ", accuracy, "%", '\n', "False Alerts: ", false_alerts, "%", '\n', "Missed Alerts: ", missed_alert, "%" "misplaced Alerts: ", misplaced_alerts, "%", '\n');   
-            
+    false_alerts = (false_alerts_counter / A) *100
+    misplaced_alerts = ((A - misplaced_alerts_counter)/A)  * 100
+    T_1_2_3 = n_row - T_0
+    print('T_1_2_3 : ' , T_1_2_3)
+    missed_alert = (missed_alerts_counter/T_1_2_3) * 100
+
+    print("Results: ", "\n" , "Number of examples: ", n_row, "\n", "Number of hits: ", counter, '\n', "Accuracy: ", accuracy, "%", '\n', "False Alerts: ", false_alerts, "%", '\n', "Missed Alerts: ", missed_alert, "%" "misplaced Alerts: ", misplaced_alerts, "%", '\n');   
+
     return accuracy, false_alerts, misplaced_alerts, missed_alert
 
 
 # give the accuracies of all the classifiers for the testing_file
 # return a dictionary per accuracy with the classifier and his accuracy for the two levels classification
 def create_data_two_levels(testing_file, nb):
-    classifiers = classifier.list_classifiers_name_id()
+    NLC = classifier.NLCClassifier(classifier.NLC_ACCOUNTS[0][0], classifier.NLC_ACCOUNTS[0][1])
+    classifiers = NLC.list_classifiers_name_id()
     accuracies = list()
     false = list()
     misplaced = list()
@@ -165,19 +162,55 @@ def create_graphs_two_levels(testing_file, nb):
     tools.show_graph(data_missed, 'Missed Alerts', xlabel, ylabel)
     plt.show()
 
-	# this function creates a csv file witch can be opend with excel and read as a table for the resaults
-def create_table_two_level(testing_file, nb):
-    res_accur, res_false, res_misplaced, res_missed = create_data_one_level(testing_file, nb)
+	# this function creates a csv file witch can be opend with excel and read as a table for the results
+def create_report_two_levels(testing_file, nb):
+    res_accur, res_false, res_misplaced, res_missed = create_data_two_levels(testing_file, nb)
+
+    # printing the dicts of the results
+    print ('---\nprinting results\n---')
+    print(res_accur)
+    print(res_accur.keys())
+    print(res_accur.values())
+    print(res_false)
+    print(res_false.keys())
+    print(res_false.values())
+    print(res_misplaced)
+    print(res_misplaced.keys())
+    print(res_misplaced.values())
+    print(res_missed)
+    print(res_missed.keys())
+    print(res_missed.values())
+    # printing to a CSV file
     target_file = testing_file + '-res.csv'
     myfile = open(target_file , 'w')
     wr = csv.writer(myfile )
-#    headlines = ['']
-#    headlines.extend(nb)
-#    wr.writerow(headlines)
-    headlines = nb
-    wr.writerow(headlines)
-    wr.writerow(res_accur)
-    wr.writerow(res_false)
-    wr.writerow(res_misplaced)
-    wr.writerow(res_missed)
-    
+
+    # write percent headlines
+    headLines = []
+    headLines.append('percent')
+    headLines.extend(res_accur.keys())
+    wr.writerow(headLines)
+
+    #write Accuracys
+    tmp =[]
+    tmp.append('Accuracy')
+    tmp.extend(res_accur.values())
+    wr.writerow(tmp)
+
+    # write False Alerts
+    tmp = []
+    tmp.append('False Alerts')
+    tmp.extend(res_false.values())
+    wr.writerow(tmp)
+
+    # write misplaced Alerts
+    tmp = []
+    tmp.append('misplaced Alerts')
+    tmp.extend(res_misplaced.values())
+    wr.writerow(tmp)
+
+    # write Missed Alerts
+    tmp = []
+    tmp.append('Missed Alerts')
+    tmp.extend(res_missed.values())
+    wr.writerow(tmp)

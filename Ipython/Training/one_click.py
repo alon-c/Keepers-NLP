@@ -1,46 +1,38 @@
-'''
-Created on Feb 12, 2017
-
-@author: Alon
-'''
 import training
 import classifier
 import one_level_accuracy
 import tools
 import two_levels_accuracy
+
+import sys
 import matplotlib.pyplot as plt
 
 filename = '../csv_files/DoronEnglish_1032_649_383_42_100_241.csv'
 nb = [15, 30, 50, 60]
 
-# running all the experience with the first approach and gives 4 graphs with accuracies
-# one graph per accuracy
+# running all the experience with the first approach and gives report with the matching results
 def exe_1_level(file_name, nb):
-def    print(file_name)
     print(file_name)
     print(nb)
-    classifier.delete_all_classifiers()
+    for NLCAccount in classifier.NLC_ACCOUNTS:
+        NLC = classifier.NLCClassifier(NLCAccount[0], NLCAccount[1])
+        NLC.delete_all_classifiers()
     training.create_training_files(file_name, nb)
     one_level_accuracy.create_list_classifiers_one_level(file_name)
-    print(classifier.list_classifiers_name_id())
-    one_level_accuracy.create_graphs_one_level(file_name, nb)
+    print(NLC.list_classifiers_name_id())
+    one_level_accuracy.create_report_one_level(file_name, nb)
 
-# print(classifier.list_classifiers_name_id())
-# classifier.delete_by_id_classifiers()
-# exe_1_level(filename, nb)  
-
-# running all the experience with the second approach and gives 4 graphs with accuracies
-# one graph per accuracy
+# running all the experience with the second approach and gives report with the matching results
 def exe_2_levels(file_name, nb):
-    # print(file_name)
-    # print(nb)
-    classifier.delete_all_classifiers()
+    print(file_name)
+    print(nb)
+    for NLCAccount in classifier.NLC_ACCOUNTS:
+        NLC = classifier.NLCClassifier(NLCAccount[0], NLCAccount[1])
+        NLC.delete_all_classifiers()
     training.create_training_files_0_1_and_bad(file_name, nb)
-    two_levels_accuracy.create_list_classifiers_two_levels(filename)(file_name)
-    print(classifier.list_classifiers_name_id())
-    two_levels_accuracy.create_graphs_two_levels(file_name, nb)
-
-# exe_2_levels(filename, nb)  
+    two_levels_accuracy.create_list_classifiers_two_levels(file_name)
+    print(NLC.list_classifiers_name_id())
+    two_levels_accuracy.create_report_two_levels(file_name, nb)
  
 # running all the experience with both approaches and gives 4 graphs with accuracies
 # one graph per accuracy
@@ -73,5 +65,18 @@ def one_graphs(file_name, nb):
     fig4.canvas.set_window_title('Missed Alerts')
     tools.show_two_graphs(data_missed, data_missed2, 'Missed Alerts', xlabel, ylabel)
     plt.show()
-    
-one_graphs(filename, nb) 
+
+# Main
+if __name__ == '__main__':
+    try:
+        if sys.argv[1] == 'one_level':
+            exe_1_level(filename, nb)
+        elif sys.argv[1] == 'two_level':
+            exe_2_levels(filename, nb)
+        else:
+            print('wrong option passed!.')
+            print ('Usage: \'python {0} <one_level | two_level>'.format(sys.argv[0]))
+            sys.exit(0)
+    except IndexError:
+        print ('Usage: \'python {0} <one_level | two_level>'.format(sys.argv[0]))
+        sys.exit(0)
